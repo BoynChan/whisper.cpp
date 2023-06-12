@@ -1,0 +1,19 @@
+
+syntax = "proto3";
+
+
+package myshell;
+
+
+// The greeting service definition.
+service WhisperStreaming {
+    // Sends a greeting
+    rpc Ping(EmptyReq) returns (PingReply) {}
+}
+
+message EmptyReq {}
+
+// The response message containing the greetings
+message PingReply {
+    string message = 1;
+}
