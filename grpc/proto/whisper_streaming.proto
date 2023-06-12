@@ -9,7 +9,7 @@ package myshell;
 service WhisperStreaming {
     // Sends a greeting
     rpc Ping(EmptyReq) returns (PingReply);
-    rpc SpeechToTextSync (SpeechToTextRequest) returns (SpeechToTextResponse);
+    rpc Transcribe (TranscribeRequest) returns (TranscribeResponse);
 }
 
 message EmptyReq {}
@@ -19,12 +19,12 @@ message PingReply {
     string message = 1;
 }
 
-message SpeechToTextRequest {
+message TranscribeRequest {
   repeated float audio_data = 1;
   string audio_format = 2;
 }
   
-message SpeechToTextResponse {
+message TranscribeResponse {
   string text = 1;
   string message = 2;
 }

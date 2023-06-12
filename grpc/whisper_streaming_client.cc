@@ -61,7 +61,7 @@ public:
     }
   }
 
-  std::string SpeechToTextSync(std::string file_name) {
+  std::string Transcribe(std::string file_name) {
     std::vector<float> pcmf32;               // mono-channel F32 PCM
     std::vector<std::vector<float>> pcmf32s; // stereo-channel F32 PCM
     if (!::read_wav(file_name, pcmf32, pcmf32s, false)) {
@@ -69,16 +69,16 @@ public:
               file_name.c_str());
       return "";
     }
-    SpeechToTextRequest req;
+    TranscribeRequest req;
     google::protobuf::RepeatedField<float> *values = req.mutable_audio_data();
     for (float v : pcmf32) {
       values->Add(v);
     }
-    SpeechToTextResponse res;
+    TranscribeResponse res;
     ClientContext context;
 
     std::cout << "ASR audio length:" << pcmf32.size() << std::endl;
-    Status status = stub_->SpeechToTextSync(&context, req, &res);
+    Status status = stub_->Transcribe(&context, req, &res);
 
     if (status.ok()) {
       return res.text();
@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
   //   std::string reply = client.Ping();
   //   std::cout << "Greeter received: " << reply << std::endl;
 
-  auto result = client.SpeechToTextSync("../../samples/gb0.wav");
+  auto result = client.Transcribe("../../samples/gb0.wav");
   std::cout << "ASR Result:" << result << std::endl;
   return 0;
 }

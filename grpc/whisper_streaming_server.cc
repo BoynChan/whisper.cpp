@@ -49,9 +49,8 @@ private:
 public:
   WhisperStreamingServer(whisper_context *ctx) { this->ctx = ctx; }
 
-  Status SpeechToTextSync(ServerContext *context,
-                          const SpeechToTextRequest *req,
-                          SpeechToTextResponse *reply) override {
+  Status Transcribe(ServerContext *context, const TranscribeRequest *req,
+                    TranscribeResponse *reply) override {
     std::vector<float> pcmf32(req->audio_data().begin(),
                               req->audio_data().end());
     std::cout << "ASR audio length:" << pcmf32.size() << std::endl;
