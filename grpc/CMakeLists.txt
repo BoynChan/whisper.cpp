@@ -43,8 +43,13 @@ add_custom_command(
         "${myshell_streaming_proto}"
       DEPENDS "${myshell_streaming_proto}")
 
-# Include generated *.pb.h files
+set(current_directory ${CMAKE_CURRENT_SOURCE_DIR})
+get_filename_component(parent_directory ${current_directory} DIRECTORY)
+
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
+include_directories("${parent_directory}/examples")
+
+include(DefaultTargetOptions)
 
 # myshell_streaming_grpc_proto
 add_library(myshell_streaming_proto
@@ -57,13 +62,23 @@ target_link_libraries(myshell_streaming_proto
   ${_GRPC_GRPCPP}
   ${_PROTOBUF_LIBPROTOBUF})
 
-# Targets greeter_[async_](client|server)
-foreach(_target
-  whisper_streaming_client whisper_streaming_server)
-  add_executable(${_target} "${_target}.cc")
-  target_link_libraries(${_target}
-    myshell_streaming_proto
-    ${_REFLECTION}
-    ${_GRPC_GRPCPP}
-    ${_PROTOBUF_LIBPROTOBUF})
-endforeach()
+add_executable(streaming_server "whisper_streaming_server.cc")
+target_link_libraries(streaming_server
+  myshell_streaming_proto
+  ${_REFLECTION}
+  ${_GRPC_GRPCPP}
+  ${_PROTOBUF_LIBPROTOBUF}
+  common
+  whisper 
+  ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(streaming_client "whisper_streaming_client.cc")
+target_link_libraries(streaming_client
+  PRIVATE
+  myshell_streaming_proto
+  ${_REFLECTION}
+  ${_GRPC_GRPCPP}
+  ${_PROTOBUF_LIBPROTOBUF}
+  common
+  whisper 
+  ${CMAKE_THREAD_LIBS_INIT})

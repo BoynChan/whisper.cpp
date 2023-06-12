@@ -8,7 +8,8 @@ package myshell;
 // The greeting service definition.
 service WhisperStreaming {
     // Sends a greeting
-    rpc Ping(EmptyReq) returns (PingReply) {}
+    rpc Ping(EmptyReq) returns (PingReply);
+    rpc SpeechToTextSync (SpeechToTextRequest) returns (SpeechToTextResponse);
 }
 
 message EmptyReq {}
@@ -16,4 +17,14 @@ message EmptyReq {}
 // The response message containing the greetings
 message PingReply {
     string message = 1;
+}
+
+message SpeechToTextRequest {
+  repeated float audio_data = 1;
+  string audio_format = 2;
+}
+  
+message SpeechToTextResponse {
+  string text = 1;
+  string message = 2;
 }
