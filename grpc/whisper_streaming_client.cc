@@ -23,6 +23,7 @@
 #include <grpcpp/grpcpp.h>
 
 #include "common.h"
+#include "whisper.h"
 #include "whisper_streaming.grpc.pb.h"
 
 using namespace myshell;
@@ -89,22 +90,71 @@ public:
     }
   }
 
+  void TranscribeStreamingByFile(std::string file_name) {
+    std::vector<float> pcmf32;               // mono-channel F32 PCM
+    std::vector<std::vector<float>> pcmf32s; // stereo-channel F32 PCM
+    if (!::read_wav(file_name, pcmf32, pcmf32s, false)) {
+      fprintf(stderr, "error: failed to read WAV file '%s'\n",
+              file_name.c_str());
+      return;
+    }
+
+    std::cout << "ASR audio length:" << pcmf32.size() << std::endl;
+    int cnt = 0;
+    int default_step_ms = 500;
+    int chunkSize = WHISPER_SAMPLE_RATE * default_step_ms / 1000;
+
+    ClientContext context;
+    auto stream = stub_->TranscribeStreaming(&context);
+    while (cnt < pcmf32.size()) {
+      StreamingTranscribeRequest req;
+      const auto t_start = std::chrono::high_resolution_clock::now();
+      for (int i = 0; i < chunkSize && cnt < pcmf32.size(); i++) {
+        req.add_audio_data(pcmf32[cnt++]);
+      }
+      stream->Write(req);
+
+      StreamingTranscibeReply reply;
+      stream->Read(&reply);
+      const auto t_now = std::chrono::high_resolution_clock::now();
+      const auto t_end =
+          std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_start)
+              .count();
+
+      std::cout << "get response:" << reply.result()[0] << std::endl;
+      std::cout << "get vad_result:" << reply.vad_result().is_talking()
+                << std::endl;
+      std::cout << "used time: " << t_end << "ms"
+                << "\n"
+                << std::endl;
+    }
+    std::cout << "cnt:" << cnt << " total_size:" << pcmf32.size() << std::endl;
+    stream->WritesDone();
+    Status status = stream->Finish();
+    if (!status.ok()) {
+      std::cout << status.error_code() << ": " << status.error_message()
+                << std::endl;
+      std::cout << "RPC failed";
+    }
+  }
+
 private:
   std::unique_ptr<WhisperStreaming::Stub> stub_;
 };
 
 int main(int argc, char **argv) {
-  // Instantiate the client. It requires a channel, out of which the actual RPCs
-  // are created. This channel models a connection to an endpoint specified by
-  // the argument "--target=" which is the only expected argument.
-  // We indicate that the channel isn't authenticated (use of
+  // Instantiate the client. It requires a channel, out of which the actual
+  // RPCs are created. This channel models a connection to an endpoint
+  // specified by the argument "--target=" which is the only expected
+  // argument. We indicate that the channel isn't authenticated (use of
   // InsecureChannelCredentials()).
   WhisperStreamingClient client(
       grpc::CreateChannel("0.0.0.0:50010", grpc::InsecureChannelCredentials()));
   //   std::string reply = client.Ping();
   //   std::cout << "Greeter received: " << reply << std::endl;
 
-  auto result = client.Transcribe("../../samples/gb0.wav");
-  std::cout << "ASR Result:" << result << std::endl;
+  // auto result = client.Transcribe("../../samples/gb0.wav");
+  // std::cout << "ASR Result:" << result << std::endl;
+  client.TranscribeStreamingByFile("../../samples/gb0.wav");
   return 0;
 }

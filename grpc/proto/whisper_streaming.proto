@@ -10,6 +10,7 @@ service WhisperStreaming {
     // Sends a greeting
     rpc Ping(EmptyReq) returns (PingReply);
     rpc Transcribe (TranscribeRequest) returns (TranscribeResponse);
+    rpc TranscribeStreaming (stream StreamingTranscribeRequest) returns (stream StreamingTranscibeReply);
 }
 
 message EmptyReq {}
@@ -27,4 +28,18 @@ message TranscribeRequest {
 message TranscribeResponse {
   string text = 1;
   string message = 2;
+}
+
+message StreamingTranscribeRequest {
+  repeated float audio_data = 1;
+}
+
+message StreamingTranscibeReply {
+  repeated string result = 1;
+  VadResult vad_result = 2;
+  string message = 3;
+}
+
+message VadResult {
+  bool is_talking = 1;
 }

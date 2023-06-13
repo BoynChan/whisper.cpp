@@ -39,6 +39,7 @@ using namespace myshell;
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
+using grpc::ServerReaderWriter;
 using grpc::Status;
 
 // Logic and data behind the server's behavior.
@@ -68,6 +69,35 @@ public:
               << " MB" << std::endl;
   }
 
+  whisper_full_params default_whisper_params() {
+
+    whisper_full_params wparams =
+        whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
+
+    wparams.print_progress = false;
+    wparams.print_special = false;
+    wparams.print_realtime = false;
+    wparams.print_timestamps = true;
+    wparams.translate = false;
+    wparams.single_segment = true;
+    wparams.max_tokens = 32;
+    wparams.language = "en";
+    wparams.n_threads =
+        std::min(4, (int32_t)std::thread::hardware_concurrency());
+    ;
+
+    wparams.audio_ctx = 0;
+    wparams.speed_up = false;
+
+    // disable temperature fallback
+    // wparams.temperature_inc  = -1.0f;
+    wparams.temperature_inc = 0.0f;
+
+    wparams.prompt_tokens = nullptr;
+    wparams.prompt_n_tokens = 0;
+    return wparams;
+  }
+
   Status Transcribe(ServerContext *context, const TranscribeRequest *req,
                     TranscribeResponse *reply) override {
     std::vector<float> pcmf32(req->audio_data().begin(),
@@ -77,20 +107,7 @@ public:
     struct whisper_context *ctx = whisper_init_from_buffer(
         this->model_buffer.data(), this->model_buffer.size());
 
-    whisper_full_params wparams =
-        whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
-    wparams.print_progress = false;
-    wparams.print_special = false;
-    wparams.print_realtime = false;
-    wparams.print_timestamps = false;
-    wparams.translate = false;
-    wparams.no_context = true;
-    wparams.single_segment = true;
-    wparams.language = "en";
-    wparams.n_threads =
-        std::min(4, (int32_t)std::thread::hardware_concurrency());
-    wparams.speed_up = false;
-
+    whisper_full_params wparams = this->default_whisper_params();
     if (whisper_full_parallel(ctx, wparams, pcmf32.data(), pcmf32.size(),
                               wparams.n_threads) != 0) {
       reply->set_message("reconize failed.");
@@ -124,6 +141,95 @@ public:
     return Status::OK;
   }
 
+  Status TranscribeStreaming(
+      ServerContext *context,
+      ServerReaderWriter<StreamingTranscibeReply, StreamingTranscribeRequest>
+          *stream) override {
+    // ready for whisper params
+    const int step_ms = 500;     // each package will have 500 ms
+    const int length_ms = 10000; // a sentence will have 10s
+    const int keep_ms = 500;     // keep 200ms audio
+    const int n_samples_step = (1e-3 * step_ms) * WHISPER_SAMPLE_RATE;
+    const int n_samples_len = (1e-3 * length_ms) * WHISPER_SAMPLE_RATE;
+    const int n_samples_keep = (1e-3 * keep_ms) * WHISPER_SAMPLE_RATE;
+    const int n_samples_30s = (1e-3 * 30000.0) * WHISPER_SAMPLE_RATE;
+    const int n_new_line = std::max(
+        1, length_ms / step_ms - 1); // number of steps to print new line
+    int n_iter = 0;
+
+    struct whisper_context *ctx = whisper_init_from_buffer(
+        this->model_buffer.data(), this->model_buffer.size());
+
+    std::vector<float> pcmf32(n_samples_30s, 0.0f);
+    std::vector<float> pcmf32_old;
+
+    StreamingTranscribeRequest request;
+
+    // result collection
+    std::vector<std::string> whisper_result(0);
+
+    // main inference loop
+    while (stream->Read(&request)) {
+
+      StreamingTranscibeReply response;
+      // step1. get audio data
+      std::vector<float> pcmf32_new(request.audio_data().begin(),
+                                    request.audio_data().end());
+
+      // step2. prepare audio data for inference
+      const int n_samples_new = pcmf32_new.size();
+      const int n_samples_take =
+          std::min((int)pcmf32_old.size(),
+                   std::max(0, n_samples_keep + n_samples_len - n_samples_new));
+      pcmf32.resize(n_samples_new + n_samples_take);
+
+      for (int i = 0; i < n_samples_take; i++) {
+        pcmf32[i] = pcmf32_old[pcmf32_old.size() - n_samples_take + i];
+      }
+
+      memcpy(pcmf32.data() + n_samples_take, pcmf32_new.data(),
+             n_samples_new * sizeof(float));
+
+      pcmf32_old = pcmf32;
+
+      whisper_full_params wparams = this->default_whisper_params();
+      if (whisper_full(ctx, wparams, pcmf32.data(), pcmf32.size()) != 0) {
+        response.set_message("reconize failed.");
+        return Status::CANCELLED;
+      }
+
+      // step3: collect result
+      const int n_segments = whisper_full_n_segments(ctx);
+      std::stringstream ss;
+      for (int i = 0; i < n_segments; ++i) {
+        const char *text = whisper_full_get_segment_text(ctx, i);
+        ss << text;
+      }
+      std::string iter_result = ss.str();
+
+      for (const auto &r : whisper_result) {
+        response.add_result(r);
+      }
+      ++n_iter;
+      if (n_iter % n_new_line == 0) {
+        // keep part of the audio for next iteration to try to mitigate word
+        // boundary issues
+        pcmf32_old =
+            std::vector<float>(pcmf32.end() - n_samples_keep, pcmf32.end());
+        whisper_result.push_back(iter_result);
+      } else {
+        response.add_result(iter_result);
+      }
+
+      // step4: get response
+      response.set_message("success");
+      auto vad = response.mutable_vad_result();
+      vad->set_is_talking(true);
+      stream->Write(response);
+    }
+    return Status::OK;
+  }
+
   Status Ping(ServerContext *context, const EmptyReq *request,
               PingReply *reply) override {
     reply->set_message("Pong");
@@ -134,7 +240,8 @@ public:
 void init_server(whisper_streaming_params &params) {
   std::cout << "init model:" + params.model << std::endl;
 
-  // struct whisper_context *ctx = whisper_init_from_file(params.model.c_str());
+  // struct whisper_context *ctx =
+  // whisper_init_from_file(params.model.c_str());
 
   // if (ctx == nullptr) {
   //   fprintf(stderr, "error: failed to initialize whisper context\n");
