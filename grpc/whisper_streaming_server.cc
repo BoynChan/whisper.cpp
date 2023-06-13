@@ -91,7 +91,8 @@ public:
         std::min(4, (int32_t)std::thread::hardware_concurrency());
     wparams.speed_up = false;
 
-    if (whisper_full(ctx, wparams, pcmf32.data(), pcmf32.size()) != 0) {
+    if (whisper_full_parallel(ctx, wparams, pcmf32.data(), pcmf32.size(),
+                              wparams.n_threads) != 0) {
       reply->set_message("reconize failed.");
       return Status::CANCELLED;
     }
