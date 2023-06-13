@@ -44,16 +44,38 @@ using grpc::Status;
 // Logic and data behind the server's behavior.
 class WhisperStreamingServer final : public WhisperStreaming::Service {
 private:
-  whisper_context *ctx;
+  std::vector<char> model_buffer;
 
 public:
-  WhisperStreamingServer(whisper_context *ctx) { this->ctx = ctx; }
+  WhisperStreamingServer(std::string model_path) {
+    std::ifstream file(model_path, std::ifstream::binary);
+    if (!file) {
+      std::cerr << "Error opening the file" << std::endl;
+      std::cout << "Error opening the file" << std::endl;
+      exit(1);
+    }
+    file.seekg(0, file.end);
+    std::streamsize file_size = file.tellg();
+    file.seekg(0, file.beg);
+
+    this->model_buffer.resize(file_size);
+    if (!file.read(this->model_buffer.data(), file_size)) {
+      std::cerr << "Error reading the file" << std::endl;
+      std::cout << "Error reading the file" << std::endl;
+      exit(1);
+    }
+    std::cout << "model size: " << this->model_buffer.size() / 1024 / 1024
+              << " MB" << std::endl;
+  }
 
   Status Transcribe(ServerContext *context, const TranscribeRequest *req,
                     TranscribeResponse *reply) override {
     std::vector<float> pcmf32(req->audio_data().begin(),
                               req->audio_data().end());
     std::cout << "ASR audio length:" << pcmf32.size() << std::endl;
+
+    struct whisper_context *ctx = whisper_init_from_buffer(
+        this->model_buffer.data(), this->model_buffer.size());
 
     whisper_full_params wparams =
         whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
@@ -69,7 +91,7 @@ public:
         std::min(4, (int32_t)std::thread::hardware_concurrency());
     wparams.speed_up = false;
 
-    if (whisper_full(this->ctx, wparams, pcmf32.data(), pcmf32.size()) != 0) {
+    if (whisper_full(ctx, wparams, pcmf32.data(), pcmf32.size()) != 0) {
       reply->set_message("reconize failed.");
       return Status::CANCELLED;
     }
@@ -111,15 +133,15 @@ public:
 void init_server(whisper_streaming_params &params) {
   std::cout << "init model:" + params.model << std::endl;
 
-  struct whisper_context *ctx = whisper_init_from_file(params.model.c_str());
+  // struct whisper_context *ctx = whisper_init_from_file(params.model.c_str());
 
-  if (ctx == nullptr) {
-    fprintf(stderr, "error: failed to initialize whisper context\n");
-    exit(3);
-  }
+  // if (ctx == nullptr) {
+  //   fprintf(stderr, "error: failed to initialize whisper context\n");
+  //   exit(3);
+  // }
 
   std::string server_address = "0.0.0.0:" + params.port;
-  WhisperStreamingServer service(ctx);
+  WhisperStreamingServer service(params.model);
 
   grpc::EnableDefaultHealthCheckService(true);
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();
