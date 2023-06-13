@@ -121,7 +121,7 @@ public:
           std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_start)
               .count();
 
-      std::cout << "get response:" << reply.result()[0] << std::endl;
+      std::cout << "get response:" << reply.result().size() << std::endl;
       std::cout << "get vad_result:" << reply.vad_result().is_talking()
                 << std::endl;
       std::cout << "used time: " << t_end << "ms"

@@ -31,6 +31,7 @@
 #include <thread>
 #include <vector>
 
+#include "common.h"
 #include "streaming_common.h"
 #include "whisper.h"
 #include "whisper_streaming.grpc.pb.h"
@@ -217,14 +218,14 @@ public:
         pcmf32_old =
             std::vector<float>(pcmf32.end() - n_samples_keep, pcmf32.end());
         whisper_result.push_back(iter_result);
-      } else {
-        response.add_result(iter_result);
       }
 
       // step4: get response
+      response.add_result(iter_result);
       response.set_message("success");
       auto vad = response.mutable_vad_result();
-      vad->set_is_talking(true);
+      vad->set_is_talking(vad_simple(pcmf32_new, WHISPER_SAMPLE_RATE, 250, 0.6f,
+                                     100.0f, false));
       stream->Write(response);
     }
     return Status::OK;
