@@ -389,4 +389,6 @@ if (WHISPER_BUILD_EXAMPLES)
 endif()
 
 # add_subdirectory(grpc)
+set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
+include(CMakeHelpers)
 add_subdirectory(websocket)
