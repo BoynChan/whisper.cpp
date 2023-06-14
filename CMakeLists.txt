@@ -389,5 +389,4 @@ if (WHISPER_BUILD_EXAMPLES)
 endif()
 
 # add_subdirectory(grpc)
-add_subdirectory(websocketpp)
 add_subdirectory(websocket)

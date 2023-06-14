@@ -11,8 +11,16 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
 include(DefaultTargetOptions)
 
-add_executable(websocket_server "websocket_server.cc")
-target_link_libraries(websocket_server
-    common
-    whisper 
-    ${CMAKE_THREAD_LIBS_INIT})
+file (GLOB SOURCE_FILES *.cc)
+file (GLOB HEADER_FILES *.hpp)
+set(CMAKE_REQUIRED_LINK_OPTIONS "-arch;arm64")
+
+find_package(websocketpp REQUIRED)
+find_package (Boost REQUIRED)
+init_target (streaming_websocket_server)
+
+build_executable (${TARGET_NAME} ${SOURCE_FILES} ${HEADER_FILES})
+target_link_libraries(${TARGET_NAME} websocketpp::websocketpp)
+
+link_boost ()
+final_target ()
