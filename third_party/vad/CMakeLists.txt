@@ -1,0 +1,1 @@
+set(VAD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include CACHE INTERNAL "vad include dir")

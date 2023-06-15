@@ -1,7 +1,9 @@
 #include <websocketpp/config/asio_no_tls.hpp>
 
 #include "common.h"
+#include "json.hpp"
 #include "streaming_common.h"
+#include "webrtc/webrtc.hpp"
 #include "whisper.h"
 #include <cmath>
 #include <csignal>
@@ -11,7 +13,8 @@
 #include <iostream>
 #include <map>
 #include <websocketpp/server.hpp>
-#include "json.hpp"
+using namespace webrtc;
+
 using json = nlohmann::json;
 
 typedef websocketpp::server<websocketpp::config::asio> server;
@@ -90,10 +93,41 @@ public:
     return wparams;
   }
 
+  bool vad_webrtc(connection_hdl hdl, const std::vector<float> pcm) {
+    auto s = this->m_connections[hdl];
+    const int frameSize = 320; // 每个子数组的长度
+    int true_cnt = 0;
+    int false_cnt = 0;
+
+    std::vector<int16_t> result(frameSize);
+
+    int numFrames = std::ceil(static_cast<float>(pcm.size()) /
+                              frameSize); // 计算分成多少个子数组
+
+    for (int f = 0; f < numFrames; ++f) {
+      // 分别将每个子数组转换为对应的int16_t数组并进行检测
+      for (int i = 0; i < frameSize && f * frameSize + i < pcm.size(); ++i) {
+        result[i] = static_cast<int16_t>(pcm[f * frameSize + i] * 32768.0);
+      }
+
+      auto ret = s->vad.IsSpeech(result.data(), frameSize, WHISPER_SAMPLE_RATE);
+      // std::cout << "vad result: " << ret << std::endl;
+      if (ret > 0) {
+        true_cnt++;
+      } else {
+        false_cnt++;
+      }
+    }
+
+    // 如果true_cnt比false_cnt大，则返回true，否则返回false
+    return true_cnt > false_cnt;
+  }
+
   void on_open(connection_hdl hdl) {
     std::shared_ptr<Session> s = std::make_shared<Session>();
     s->ctx = whisper_init_from_buffer(this->model_buffer.data(),
                                       this->model_buffer.size());
+    // s->vad = Vad(Vad::kVadAggressive);
     this->m_connections[hdl] = s;
   }
 
@@ -148,7 +182,8 @@ public:
     // for (const auto &r : whisper_result) {
     //   response.add_result(r);
     // }
-    std::vector<std::string> result_response(s->whisper_result.begin(),s->whisper_result.end());
+    std::vector<std::string> result_response(s->whisper_result.begin(),
+                                             s->whisper_result.end());
     result_response.push_back(iter_result);
     ++s->n_iter;
     if (s->n_iter % s->n_newline == 0) {
@@ -159,10 +194,9 @@ public:
       s->whisper_result.push_back(iter_result);
     }
 
-
     json j;
     j["result"] = result_response;
-    j["is_talking"] = true;
+    j["is_talking"] = this->vad_webrtc(hdl, pcmf32_new);
     try {
       this->m_server.send(hdl, j.dump(), websocketpp::frame::opcode::text);
     } catch (websocketpp::exception const &e) {

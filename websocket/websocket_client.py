@@ -15,7 +15,7 @@ def divide_chunks(l, n=8000):
         yield l[i:i + n]
 
 async def echo_websocket_client(uri):
-    numerical_samples = read_wav_file("../samples/mm0.wav")
+    numerical_samples = read_wav_file("../samples/hi_hello.wav")
     audio_chunks = list(divide_chunks(numerical_samples, 8000))
     async with websockets.connect(uri) as websocket:
         for idx, chunk in enumerate(audio_chunks):

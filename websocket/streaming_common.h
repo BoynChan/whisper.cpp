@@ -1,6 +1,8 @@
+#include "webrtc/webrtc.hpp"
 #include "whisper.h"
 #include <iostream>
 #include <vector>
+using namespace webrtc;
 
 // command-line parameters
 struct whisper_streaming_params {
@@ -47,6 +49,7 @@ public:
     ctx = nullptr;
     n_newline = std::max(1, length_ms / step_ms -
                                 1); // number of steps to print new line
+    vad.Init();
   }
   ~Session() {
     if (ctx != nullptr) {
@@ -67,4 +70,5 @@ public:
   std::vector<std::string> whisper_result;
   int n_iter;
   int n_newline;
+  Vad vad = Vad(Vad::kVadAggressive);
 };

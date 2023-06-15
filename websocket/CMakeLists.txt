@@ -26,6 +26,7 @@ init_target (streaming_websocket_server)
 
 include_directories(${TARGET_NAME} ${Boost_INCLUDE_DIRS})
 build_executable (${TARGET_NAME} ${SOURCE_FILES} ${HEADER_FILES})
+target_include_directories(${TARGET_NAME} PRIVATE ${VAD_DIR})
 target_link_libraries(${TARGET_NAME} websocketpp::websocketpp common whisper pthread ${Boost_LIBRARIES})
 
 link_boost ()
