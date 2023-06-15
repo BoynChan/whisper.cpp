@@ -385,10 +385,10 @@ if (WHISPER_BUILD_TESTS AND NOT CMAKE_JS_VERSION)
 endif ()
 
 if (WHISPER_BUILD_EXAMPLES)
-    add_subdirectory(examples)
 endif()
 
 # add_subdirectory(grpc)
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 include(CMakeHelpers)
+add_subdirectory(examples)
 add_subdirectory(websocket)
