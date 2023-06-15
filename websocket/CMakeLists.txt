@@ -20,11 +20,13 @@ file (GLOB SOURCE_FILES *.cc)
 file (GLOB HEADER_FILES *.hpp)
 
 find_package(websocketpp REQUIRED)
-find_package (Boost REQUIRED)
+find_package (Boost REQUIRED COMPONENTS system filesystem)
+find_package (Threads REQUIRED)
 init_target (streaming_websocket_server)
 
+include_directories(${TARGET_NAME} ${Boost_INCLUDE_DIRS})
 build_executable (${TARGET_NAME} ${SOURCE_FILES} ${HEADER_FILES})
-target_link_libraries(${TARGET_NAME} websocketpp::websocketpp common whisper )
+target_link_libraries(${TARGET_NAME} websocketpp::websocketpp common whisper pthread ${Boost_LIBRARIES})
 
 link_boost ()
 final_target ()
