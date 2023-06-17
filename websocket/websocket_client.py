@@ -7,8 +7,8 @@ import time
 
 def read_wav_file(filename):
     wav = wavio.read(filename)
-    pcmf32 = wav.data[:, 0].astype(np.float32) / 32768.0
-    return pcmf32
+    pcmi16 = wav.data[:, 0].astype(np.int16)
+    return pcmi16
 
 
 def divide_chunks(l, n=8000):

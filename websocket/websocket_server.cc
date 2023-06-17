@@ -1,9 +1,11 @@
+#include <stdint.h>
 #include <websocketpp/config/asio_no_tls.hpp>
 
 #include "common.h"
 #include "json.hpp"
 #include "streaming_common.h"
 #include "webrtc/webrtc.hpp"
+#include "websocketpp/common/connection_hdl.hpp"
 #include "whisper.h"
 #include <cmath>
 #include <csignal>
@@ -20,6 +22,7 @@ using json = nlohmann::json;
 typedef websocketpp::server<websocketpp::config::asio> server;
 
 using websocketpp::connection_hdl;
+
 using websocketpp::lib::bind;
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
@@ -144,9 +147,15 @@ public:
       // BINARY
     }
     // Convert the binary payload to a float32 array
-    std::vector<float> pcmf32_new(msg->get_payload().size() / sizeof(float));
-    std::memcpy(pcmf32_new.data(), msg->get_payload().data(),
+    std::vector<int16_t> pcmi16_new(msg->get_payload().size() /
+                                    sizeof(int16_t));
+    std::memcpy(pcmi16_new.data(), msg->get_payload().data(),
                 msg->get_payload().size());
+
+    std::vector<float> pcmf32_new(pcmi16_new.size());
+    for (int i = 0; i < pcmi16_new.size(); i++) {
+      pcmf32_new[i] = float(pcmi16_new[i]) / float(32768.0);
+    }
 
     // Get the size of the array and prepare the response
     const int n_samples_new = pcmf32_new.size();
