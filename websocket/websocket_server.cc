@@ -78,7 +78,7 @@ public:
     wparams.max_tokens = 32;
     wparams.language = "en";
     wparams.n_threads =
-        std::min(4, (int32_t)std::thread::hardware_concurrency());
+        std::min(8, (int32_t)std::thread::hardware_concurrency());
     ;
 
     wparams.audio_ctx = 0;
@@ -206,6 +206,7 @@ public:
   }
 
   void run(uint16_t port) {
+    std::cout << "Listening on port " << port << std::endl;
     m_server.set_reuse_addr(true);
     m_server.listen(port);
     m_server.start_accept();
@@ -231,7 +232,7 @@ int main(int argc, char **argv) {
   streaming_server server(params.model);
 
   try {
-    server.run(9002);
+    server.run(std::stoi(params.port));
   } catch (websocketpp::exception const &e) {
     std::cout << e.what() << std::endl;
   } catch (...) {

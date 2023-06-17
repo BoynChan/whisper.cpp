@@ -7,7 +7,7 @@ using namespace webrtc;
 // command-line parameters
 struct whisper_streaming_params {
   std::string model = "models/ggml-base.en.bin";
-  std::string port = "50010";
+  std::string port = "9002";
 };
 
 void whisper_streaming_print_usage(int /*argc*/, char **argv,
