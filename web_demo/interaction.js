@@ -51,7 +51,7 @@ async function connect() {
             speaking_status.vad_false_count = 0;
             speaking_status.start_talking = true;
         }
-        if (speaking_status.vad_false_count > 4) {
+        if (speaking_status.vad_false_count > 3) {
 
             onStop();
         }
