@@ -149,21 +149,13 @@ async function playTTS() {
     console.log(`buf length:${buf.size}`)
 }
 
-
-function onStop() {
-    speaking_status.vad_false_count = 0;
-    speaking_status.start_talking = false;
+function onFinish() {
     start.disabled = false;
     stop.disabled = true;
 
     if (!context.recorder) {
         return;
     }
-    appendHistoryAndRender({ role: "human", content: speaking_status.lask_vad_result.join("") })
-    talkToBot(speaking_status.lask_vad_result.join(""), speaking_status.chat_history)
-
-    // downloadBlob(new Blob(chunks), "test.pcm");
-
     context.recorder.stopRecording(() => {
         if (!context.webSocket) {
             return;
@@ -172,4 +164,14 @@ function onStop() {
 
         context.mediaStream?.getAudioTracks().forEach((item) => item.stop());
     });
+}
+
+function onStop() {
+    speaking_status.vad_false_count = 0;
+    speaking_status.start_talking = false;
+
+    appendHistoryAndRender({ role: "human", content: speaking_status.lask_vad_result.join("") })
+    talkToBot(speaking_status.lask_vad_result.join(""), speaking_status.chat_history)
+
+    onFinish()
 }
