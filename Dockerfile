@@ -19,9 +19,11 @@ WORKDIR /build
 RUN cmake . && make streaming_websocket_server
 
 RUN rm models/*.bin && \
-    bash ./models/download-ggml-model.sh base.en && \
+    bash ./models/download-ggml-model.sh tiny.en && \
     make quantize && \
-    ./bin/quantize models/ggml-base.en.bin models/ggml-base.en-q5_0.bin q5_0
+    ./bin/quantize models/ggml-tiny.en.bin models/ggml-tiny.en-q5_0.bin q5_0
 
 # 设置应用程序入口点
-# ENTRYPOINT ["/build/bin/streaming_websocket_server"]
+
+EXPOSE 9002
+ENTRYPOINT ["/build/bin/streaming_websocket_server","-m","./models/ggml-tiny.en-q5_0.bin","-p","9002"]
