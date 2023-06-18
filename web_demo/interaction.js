@@ -1,4 +1,4 @@
-const url = "wss://streaming-proxy.boyn.workers.dev";
+const url = "ws://34.133.234.87:5052";
 var output = document.getElementById("output");
 var start = document.getElementById("start");
 var stop = document.getElementById("stop");
