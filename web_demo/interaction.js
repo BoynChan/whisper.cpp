@@ -1,4 +1,4 @@
-const url = "ws://localhost:9002";
+const url = "wss://streaming-proxy.boyn.workers.dev";
 var output = document.getElementById("output");
 var start = document.getElementById("start");
 var stop = document.getElementById("stop");
