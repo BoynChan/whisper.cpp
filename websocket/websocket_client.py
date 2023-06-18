@@ -36,5 +36,5 @@ async def echo_websocket_client(uri):
             print(f"函数执行耗时: {elapsed_time:.6f}秒")
 
 
-uri = "wss://google-gpu.boynn.xyz:5052"
+uri = "wss://google-gpu.boynn.xyz"
 asyncio.get_event_loop().run_until_complete(echo_websocket_client(uri))

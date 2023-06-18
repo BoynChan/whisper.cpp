@@ -60,6 +60,9 @@ public:
     }
     std::cout << "model size: " << this->model_buffer.size() / 1024 / 1024
               << " MB" << std::endl;
+    fprintf(stderr, "system_info: n_threads = %d / %d | %s\n",
+            std::min(8, (int32_t)std::thread::hardware_concurrency()) * 1,
+            std::thread::hardware_concurrency(), whisper_print_system_info());
   }
 
   ~streaming_server() {
@@ -75,10 +78,10 @@ public:
     wparams.print_progress = false;
     wparams.print_special = false;
     wparams.print_realtime = false;
-    wparams.print_timestamps = true;
+    wparams.print_timestamps = false;
     wparams.translate = false;
-    wparams.single_segment = true;
-    wparams.max_tokens = 32;
+    wparams.detect_language = false;
+    // wparams.max_tokens = 32;
     wparams.language = "en";
     wparams.n_threads =
         std::min(8, (int32_t)std::thread::hardware_concurrency());
@@ -174,8 +177,8 @@ public:
     s->pcmf32_old = s->pcmf32;
 
     whisper_full_params wparams = this->default_whisper_params();
-    if (whisper_full(s->ctx, wparams, s->pcmf32.data(), s->pcmf32.size()) !=
-        0) {
+    if (whisper_full_parallel(s->ctx, wparams, s->pcmf32.data(),
+                              s->pcmf32.size(), 1) != 0) {
       this->m_server.send(hdl, "error", websocketpp::frame::opcode::text);
     }
 
