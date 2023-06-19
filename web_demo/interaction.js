@@ -1,4 +1,4 @@
-const url = "ws://34.133.234.87:5052";
+const url = "wss://google-gpu.boynn.xyz";
 var output = document.getElementById("output");
 var start = document.getElementById("start");
 var stop = document.getElementById("stop");
