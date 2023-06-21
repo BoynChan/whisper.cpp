@@ -11,13 +11,13 @@ def read_wav_file(filename):
     return pcmi16
 
 
-def divide_chunks(l, n=8000):
+def divide_chunks(l, n=16000):
     for i in range(0, len(l), n):
         yield l[i:i + n]
 
 async def echo_websocket_client(uri):
     numerical_samples = read_wav_file("../samples/mm0.wav")
-    audio_chunks = list(divide_chunks(numerical_samples, 8000))
+    audio_chunks = list(divide_chunks(numerical_samples, 16000))
     async with websockets.connect(uri) as websocket:
         for idx, chunk in enumerate(audio_chunks):
             # Convert chunk to binary data and send over websocket
@@ -36,5 +36,5 @@ async def echo_websocket_client(uri):
             print(f"函数执行耗时: {elapsed_time:.6f}秒")
 
 
-uri = "wss://google-gpu.boynn.xyz"
+uri = "ws://localhost:5003"
 asyncio.get_event_loop().run_until_complete(echo_websocket_client(uri))
