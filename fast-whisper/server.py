@@ -12,12 +12,12 @@ from typing import List, Any
 
 class WebSocketServer:
     def __init__(self):
-        model_size = "base"
-        self.model = WhisperModel(model_size, device="cpu",
-                                  compute_type="int8", download_root="./models")
         self.sentence_split_duration = 10
 
     async def handler(self, websocket, path):
+        model_size = "base"
+        model = WhisperModel(model_size, device="cpu",
+                                  compute_type="int8", download_root="./models")
         pcmf32: np.ndarray[np.float32, Any] = np.empty(
             (0), dtype=np.float32)
         pcmf32_old: np.ndarray[np.float32, Any] = np.empty(
@@ -31,7 +31,7 @@ class WebSocketServer:
                 pcmf32_new = np.array(struct.unpack(
                     f'{len(message) // 2}h', message), dtype=np.int16).astype(np.float32) / 32768.0
                 pcmf32 = np.concatenate((pcmf32_old, pcmf32_new))
-                segments, info = self.model.transcribe(
+                segments, info = model.transcribe(
                     pcmf32, beam_size=5, language="en", without_timestamps=True)
                 pcmf32_old = pcmf32
                 segment = " ".join(map(lambda x: x.text, list(segments)))
