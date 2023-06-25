@@ -76,7 +76,7 @@ class WebSocketServer:
         except ConnectionClosedError:
             print("peer closed")
 
-    async def start_server(self, host='localhost', port=9002):
+    async def start_server(self, host='localhost', port=5003):
         async with websockets.serve(self.handler, host, port):
             print(f"WebSocket服务启动成功，正在监听 {host}:{port}")
             await asyncio.Future()
