@@ -8,6 +8,10 @@ import wavio
 import numpy as np
 import struct
 from typing import List, Any
+from faster_whisper.vad import (
+    VadOptions,
+    get_speech_timestamps,
+)
 
 
 class WebSocketServer:
@@ -16,7 +20,7 @@ class WebSocketServer:
 
     async def handler(self, websocket, path):
         model_size = "base"
-        model = WhisperModel(model_size, device="cpu",
+        model = WhisperModel(model_size, device="gpu",
                                   compute_type="int8", download_root="./models")
         pcmf32: np.ndarray[np.float32, Any] = np.empty(
             (0), dtype=np.float32)
@@ -28,12 +32,26 @@ class WebSocketServer:
             async for message in websocket:
                 if len(message) == 0:
                     break
+                try:
+                    # 尝试解析消息为JSON
+                    msg = json.loads(message)
+                    if msg["command"] == "clear":
+                        pcmf32_old = np.empty((0), dtype=np.float32)
+                        pcmf32 = np.empty((0), dtype=np.float32)
+                        whisper_result = []
+                        last_response_result = []
+                    continue
+                except Exception:
+                    pass
+
                 pcmf32_new = np.array(struct.unpack(
                     f'{len(message) // 2}h', message), dtype=np.int16).astype(np.float32) / 32768.0
                 pcmf32 = np.concatenate((pcmf32_old, pcmf32_new))
                 segments, info = model.transcribe(
                     pcmf32, beam_size=5, language="en", without_timestamps=True)
                 pcmf32_old = pcmf32
+                speech_chunks = get_speech_timestamps(
+                    pcmf32_new, vad_parameters)
                 segment = " ".join(map(lambda x: x.text, list(segments)))
 
                 response_result = whisper_result[:]
@@ -43,18 +61,31 @@ class WebSocketServer:
                     # 保留100ms的音频
                     pcmf32_old = pcmf32[-100 * 16:].copy()
 
-                response = {"response": response_result,
-                            "duration": info.duration}
+                # 记录上一次结果, 如果VAD判断为真但是结果没有任何变化, 则记为不在说话
+                is_talking = speech_chunks.__len__() > 0
+                if is_talking and response_result == last_response_result:
+                    is_talking = False
+                last_response_result = response_result
+
+                response = {"result": response_result,
+                            "duration": info.duration, "is_talking": is_talking, "speech_chunks": speech_chunks}
                 await websocket.send(json.dumps(response))
         except ConnectionClosedError:
             print("peer closed")
 
-    async def start_server(self, host='localhost', port=5003):
+    async def start_server(self, host='localhost', port=9002):
         async with websockets.serve(self.handler, host, port):
             print(f"WebSocket服务启动成功，正在监听 {host}:{port}")
             await asyncio.Future()
 
 
+if __name__ == "__main__":
+    server = WebSocketServer()
+
+    try:
+        asyncio.run(server.start_server())
+    except KeyboardInterrupt:
+        print("WebSocket服务器已关闭")
 if __name__ == "__main__":
     server = WebSocketServer()
 
