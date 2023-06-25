@@ -20,7 +20,7 @@ class WebSocketServer:
 
     async def handler(self, websocket, path):
         model_size = "base"
-        model = WhisperModel(model_size, device="gpu",
+        model = WhisperModel(model_size, device="cuda",
                              compute_type="int8", download_root="./models")
         pcmf32: np.ndarray[np.float32, Any] = np.empty(
             (0), dtype=np.float32)
