@@ -53,11 +53,13 @@ class WebSocketServer:
                 segments, info = model.transcribe(
                     pcmf32, beam_size=5, language="en", without_timestamps=True)
                 pcmf32_old = pcmf32
-                speech_chunks = get_speech_timestamps(
+                new_speech_chunks = get_speech_timestamps(
                     pcmf32_new, vad_parameters)
+                all_speech_chunks = get_speech_timestamps(
+                    pcmf32, vad_parameters)
                 segment = " ".join(map(lambda x: x.text, list(segments)))
                 # 如果VAD检测不到在说话, 则将输出的结果设置为空
-                if speech_chunks.__len__() == 0:
+                if new_speech_chunks.__len__() == 0 and all_speech_chunks.__len__() == 0:
                     segment = ""
 
                 response_result = whisper_result[:]
@@ -68,7 +70,7 @@ class WebSocketServer:
                     pcmf32_old = pcmf32[-100 * 16:].copy()
 
                 # 记录上一次结果, 如果VAD判断为真但是结果没有任何变化, 则记为不在说话
-                is_talking = speech_chunks.__len__() > 0
+                is_talking = new_speech_chunks.__len__() > 0
                 if is_talking and response_result == last_response_result:
                     is_talking = False
                 last_response_result = response_result
