@@ -56,6 +56,9 @@ class WebSocketServer:
                 speech_chunks = get_speech_timestamps(
                     pcmf32_new, vad_parameters)
                 segment = " ".join(map(lambda x: x.text, list(segments)))
+                # 此处做一些正则, 来使whisper输出更加符合预期
+                if segment == "Thank you.":
+                    segment = ""
 
                 response_result = whisper_result[:]
                 response_result.append(segment.strip())
