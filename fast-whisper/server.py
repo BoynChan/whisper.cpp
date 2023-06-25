@@ -51,7 +51,7 @@ class WebSocketServer:
                     f'{len(message) // 2}h', message), dtype=np.int16).astype(np.float32) / 32768.0
                 pcmf32 = np.concatenate((pcmf32_old, pcmf32_new))
                 segments, info = model.transcribe(
-                    pcmf32, beam_size=5, language="en", without_timestamps=True)
+                    pcmf32, beam_size=5, language="en", without_timestamps=True,temperature=0)
                 pcmf32_old = pcmf32
                 new_speech_chunks = get_speech_timestamps(
                     pcmf32_new, vad_parameters)
