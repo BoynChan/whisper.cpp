@@ -21,12 +21,15 @@ class WebSocketServer:
     async def handler(self, websocket, path):
         model_size = "base"
         model = WhisperModel(model_size, device="gpu",
-                                  compute_type="int8", download_root="./models")
+                             compute_type="int8", download_root="./models")
         pcmf32: np.ndarray[np.float32, Any] = np.empty(
             (0), dtype=np.float32)
         pcmf32_old: np.ndarray[np.float32, Any] = np.empty(
             (0), dtype=np.float32)
         whisper_result: List(str) = []
+        last_response_result: List(str) = []
+
+        vad_parameters = VadOptions()
 
         try:
             async for message in websocket:
@@ -79,13 +82,6 @@ class WebSocketServer:
             await asyncio.Future()
 
 
-if __name__ == "__main__":
-    server = WebSocketServer()
-
-    try:
-        asyncio.run(server.start_server())
-    except KeyboardInterrupt:
-        print("WebSocket服务器已关闭")
 if __name__ == "__main__":
     server = WebSocketServer()
 
