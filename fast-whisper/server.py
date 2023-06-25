@@ -58,7 +58,7 @@ class WebSocketServer:
                 all_speech_chunks = get_speech_timestamps(
                     pcmf32, vad_parameters)
                 segment = " ".join(map(lambda x: x.text, list(segments)))
-                # 如果VAD检测不到在说话, 并且前面一句也没有在说话, 则将输出的结果设置为空
+                # 如果VAD检测不到在说话, 并且一整句话中也没有在说话, 则将输出的结果设置为空
                 if new_speech_chunks.__len__() == 0 and all_speech_chunks.__len__() == 0:
                     segment = ""
 
@@ -76,7 +76,7 @@ class WebSocketServer:
                 last_response_result = response_result
 
                 response = {"result": response_result,
-                            "duration": info.duration, "is_talking": is_talking, "speech_chunks": speech_chunks}
+                            "duration": info.duration, "is_talking": is_talking, "speech_chunks": new_speech_chunks}
                 await websocket.send(json.dumps(response))
         except ConnectionClosedError:
             print("peer closed")
